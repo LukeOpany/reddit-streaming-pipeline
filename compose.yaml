@@ -8,3 +8,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
+
+  kafka:
+    image: apache/kafka:4.3.1
+    container_name: reddit_kafka
+    ports:
+      - "9092:9092"
