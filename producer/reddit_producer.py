@@ -1,4 +1,6 @@
 import json
+import random
+import time
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -9,19 +11,47 @@ producer = Producer({
     "bootstrap.servers": "localhost:9092"
 })
 
-event = {
-    "id": str(uuid4()),
-    "subreddit": "python",
-    "text": "Has anyone tried the new Python release?",
-    "created_at": datetime.now(timezone.utc).isoformat()
-}
+sample_messages = [
+    {
+        "subreddit": "python",
+        "text": "The new Python release is really impressive."
+    },
+    {
+        "subreddit": "dataengineering",
+        "text": "Kafka makes streaming pipelines much easier to scale."
+    },
+    {
+        "subreddit": "datascience",
+        "text": "I am struggling to understand Spark window functions."
+    },
+    {
+        "subreddit": "programming",
+        "text": "This library has terrible documentation."
+    },
+    {
+        "subreddit": "python",
+        "text": "Has anyone tried this new data processing package?"
+    }
+]
 
-producer.produce(
-    "reddit_messages",
-    value=json.dumps(event)
-)
 
-producer.flush()
+while True:
+    sample = random.choice(sample_messages)
 
-print("Event sent to Kafka:")
-print(event)
+    event = {
+        "id": str(uuid4()),
+        "subreddit": sample["subreddit"],
+        "text": sample["text"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+
+    producer.produce(
+        "reddit_messages",
+        value=json.dumps(event)
+    )
+
+    producer.flush()
+
+    print(event)
+
+    time.sleep(1)
