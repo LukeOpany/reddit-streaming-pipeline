@@ -43,12 +43,32 @@ parsed_df = (
 )
 
 
+def write_to_postgres(batch_df, batch_id):
+    row_count = batch_df.count()
+
+    print(f"Batch {batch_id}: {row_count} rows")
+
+    if row_count > 0:
+        (
+            batch_df.write
+            .format("jdbc")
+            .option(
+                "url",
+                "jdbc:postgresql://localhost:5433/reddit_pipeline"
+            )
+            .option("dbtable", "reddit_events")
+            .option("user", "reddit")
+            .option("password", "reddit_password")
+            .option("driver", "org.postgresql.Driver")
+            .mode("append")
+            .save()
+        )
+
+
 query = (
     parsed_df
     .writeStream
-    .format("console")
-    .outputMode("append")
-    .option("truncate", False)
+    .foreachBatch(write_to_postgres)
     .start()
 )
 
