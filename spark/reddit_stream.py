@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, from_json
+from pyspark.sql.functions import col, from_json, length
 from pyspark.sql.types import StructType, StructField, StringType
 
 
@@ -42,6 +42,11 @@ parsed_df = (
     .select("event.*")
 )
 
+transformed_df = (
+    parsed_df
+    .withColumn("text_length", length(col("text")))
+)
+
 
 def write_to_postgres(batch_df, batch_id):
     row_count = batch_df.count()
@@ -66,7 +71,7 @@ def write_to_postgres(batch_df, batch_id):
 
 
 query = (
-    parsed_df
+    transformed_df
     .writeStream
     .foreachBatch(write_to_postgres)
     .start()
