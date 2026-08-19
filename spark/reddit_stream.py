@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, from_json, length
+from pyspark.sql.functions import col, from_json, length, when 
 from pyspark.sql.types import StructType, StructField, StringType
 
 
@@ -45,6 +45,12 @@ parsed_df = (
 transformed_df = (
     parsed_df
     .withColumn("text_length", length(col("text")))
+    .withColumn(
+        "text_size",
+        when(col("text_length") < 45, "short")
+        .when(col("text_length") <= 55, "medium")
+        .otherwise("long")
+    )
 )
 
 
