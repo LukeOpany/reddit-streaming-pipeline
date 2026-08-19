@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, from_json, length, when 
+from pyspark.sql.functions import col, from_json, length, when, lower, regexp_replace, trim 
 from pyspark.sql.types import StructType, StructField, StringType
 
 
@@ -50,6 +50,16 @@ transformed_df = (
         when(col("text_length") < 45, "short")
         .when(col("text_length") <= 55, "medium")
         .otherwise("long")
+    )
+    .withColumn(
+        "clean_text",
+        trim(
+            regexp_replace(
+                lower(col("text")),
+                r"[^a-z0-9\s]",
+                ""
+            )
+        )
     )
 )
 
