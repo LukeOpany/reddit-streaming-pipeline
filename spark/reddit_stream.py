@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, from_json, length, when, lower, regexp_replace, trim, to_timestamp, hour
+from pyspark.sql.functions import col, from_json, length, when, lower, regexp_replace, trim, to_timestamp, hour, window
 from pyspark.sql.types import StructType, StructField, StringType
 
 
@@ -83,6 +83,16 @@ transformed_df = (
     )
 )
 
+windowed_df = (
+    transformed_df
+    .groupBy(
+        window(
+            col("event_timestamp"),
+            "1 minute"
+        )
+    )
+    .count()
+)
 
 def write_to_postgres(batch_df, batch_id):
     row_count = batch_df.count()
@@ -113,5 +123,14 @@ query = (
     .start()
 )
 
+window_query = (
+    windowed_df
+    .writeStream
+    .format("console")
+    .outputMode("complete")
+    .option("truncate", False)
+    .start()
+)
 
-query.awaitTermination()
+
+spark.streams.awaitAnyTermination()
