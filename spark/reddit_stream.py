@@ -61,6 +61,18 @@ transformed_df = (
             )
         )
     )
+    .withColumn(
+        "mentions_kafka",
+        when(col("clean_text").contains("kafka"), 1).otherwise(0)
+    )
+    .withColumn(
+        "mentions_spark",
+        when(col("clean_text").contains("spark"), 1).otherwise(0)
+    )
+    .withColumn(
+        "mentions_python",
+        when(col("clean_text").contains("python"), 1).otherwise(0)
+    )
 )
 
 
