@@ -85,12 +85,13 @@ transformed_df = (
 
 windowed_df = (
     transformed_df
-    .withWatermark("event_timestamp", "2 minute")
+    .withWatermark("event_timestamp", "2 minutes")
     .groupBy(
         window(
             col("event_timestamp"),
             "1 minute"
-        )
+        ),
+        col("subreddit")
     )
     .count()
 )
