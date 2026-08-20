@@ -85,6 +85,7 @@ transformed_df = (
 
 windowed_df = (
     transformed_df
+    .withWatermark("event_timestamp", "2 minute")
     .groupBy(
         window(
             col("event_timestamp"),
