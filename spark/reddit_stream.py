@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, from_json, length, when, lower, regexp_replace, trim 
+from pyspark.sql.functions import col, from_json, length, when, lower, regexp_replace, trim, to_timestamp, hour
 from pyspark.sql.types import StructType, StructField, StringType
 
 
@@ -72,6 +72,14 @@ transformed_df = (
     .withColumn(
         "mentions_python",
         when(col("clean_text").contains("python"), 1).otherwise(0)
+    )
+    .withColumn(
+        "event_timestamp",
+        to_timestamp(col("created_at"))
+    )
+    .withColumn(
+        "event_hour",
+        hour(col("event_timestamp"))
     )
 )
 
