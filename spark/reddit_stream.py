@@ -96,6 +96,16 @@ windowed_df = (
     .count()
 )
 
+window_summary_df = (
+    windowed_df
+    .select(
+        col("window.start").alias("window_start"),
+        col("window.end").alias("window_end"),
+        col("subreddit"),
+        col("count").alias("event_count"),
+    )
+)
+
 def write_to_postgres(batch_df, batch_id):
     row_count = batch_df.count()
 
@@ -118,6 +128,27 @@ def write_to_postgres(batch_df, batch_id):
         )
 
 
+def write_window_summary_to_postgres(batch_df, batch_id):
+    row_count = batch_df.count()
+
+    print(f"Window batch {batch_id}: {row_count} rows")
+
+    if row_count > 0:
+        (
+            batch_df.write
+            .format("jdbc")
+            .option(
+                "url",
+                "jdbc:postgresql://localhost:5433/reddit_pipeline"
+            )
+            .option("dbtable", "event_window_summary")
+            .option("user", "reddit")
+            .option("password", "reddit_password")
+            .option("driver", "org.postgresql.Driver")
+            .mode("append")
+            .save()
+        )
+
 query = (
     transformed_df
     .writeStream
@@ -126,11 +157,10 @@ query = (
 )
 
 window_query = (
-    windowed_df
+    window_summary_df
     .writeStream
-    .format("console")
-    .outputMode("complete")
-    .option("truncate", False)
+    .outputMode("update")
+    .foreachBatch(write_window_summary_to_postgres)
     .start()
 )
 
