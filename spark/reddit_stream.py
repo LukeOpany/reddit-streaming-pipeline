@@ -1,4 +1,7 @@
+import os
+
 import psycopg
+from dotenv import load_dotenv
 
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import (
@@ -17,7 +20,19 @@ from pyspark.sql.types import StructField, StringType, StructType
 
 
 # --------------------------------------------------
-# 1. START SPARK
+# 1. LOAD ENVIRONMENT VARIABLES
+# --------------------------------------------------
+
+load_dotenv()
+
+POSTGRES_DB = os.getenv("POSTGRES_DB")
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5433")
+
+
+# --------------------------------------------------
+# 2. START SPARK
 # --------------------------------------------------
 
 spark = (
@@ -30,7 +45,7 @@ spark.sparkContext.setLogLevel("WARN")
 
 
 # --------------------------------------------------
-# 2. DEFINE THE STRUCTURE OF AN INCOMING EVENT
+# 3. DEFINE THE STRUCTURE OF AN INCOMING EVENT
 # --------------------------------------------------
 
 schema = StructType([
@@ -42,7 +57,7 @@ schema = StructType([
 
 
 # --------------------------------------------------
-# 3. READ RAW EVENTS FROM KAFKA
+# 4. READ RAW EVENTS FROM KAFKA
 # --------------------------------------------------
 
 raw_df = (
@@ -56,7 +71,7 @@ raw_df = (
 
 
 # --------------------------------------------------
-# 4. PARSE THE JSON EVENT
+# 5. PARSE THE JSON EVENT
 # --------------------------------------------------
 
 parsed_df = (
@@ -73,19 +88,17 @@ parsed_df = (
 
 
 # --------------------------------------------------
-# 5. TRANSFORM / ENRICH EACH EVENT
+# 6. TRANSFORM / ENRICH EACH EVENT
 # --------------------------------------------------
 
 transformed_df = (
     parsed_df
 
-    # How many characters are in the text?
     .withColumn(
         "text_length",
         length(col("text"))
     )
 
-    # Categorize the text by size.
     .withColumn(
         "text_size",
         when(col("text_length") < 45, "short")
@@ -93,7 +106,6 @@ transformed_df = (
         .otherwise("long")
     )
 
-    # Clean the text.
     .withColumn(
         "clean_text",
         trim(
@@ -105,27 +117,26 @@ transformed_df = (
         )
     )
 
-    # Keyword features.
     .withColumn(
         "mentions_kafka",
         when(col("clean_text").contains("kafka"), 1).otherwise(0)
     )
+
     .withColumn(
         "mentions_spark",
         when(col("clean_text").contains("spark"), 1).otherwise(0)
     )
+
     .withColumn(
         "mentions_python",
         when(col("clean_text").contains("python"), 1).otherwise(0)
     )
 
-    # Convert the timestamp from text into a real timestamp.
     .withColumn(
         "event_timestamp",
         to_timestamp(col("created_at"))
     )
 
-    # Extract the hour.
     .withColumn(
         "event_hour",
         hour(col("event_timestamp"))
@@ -134,7 +145,7 @@ transformed_df = (
 
 
 # --------------------------------------------------
-# 6. CREATE THE 1-MINUTE STREAMING ANALYSIS
+# 7. CREATE 1-MINUTE STREAMING ANALYSIS
 # --------------------------------------------------
 
 windowed_df = (
@@ -155,7 +166,7 @@ windowed_df = (
 
 
 # --------------------------------------------------
-# 7. FLATTEN THE WINDOW RESULTS
+# 8. FLATTEN WINDOW RESULTS
 # --------------------------------------------------
 
 window_summary_df = (
@@ -170,7 +181,7 @@ window_summary_df = (
 
 
 # --------------------------------------------------
-# 8. WRITE INDIVIDUAL EVENTS TO POSTGRESQL
+# 9. WRITE INDIVIDUAL EVENTS TO POSTGRESQL
 # --------------------------------------------------
 
 def write_to_postgres(batch_df, batch_id):
@@ -184,11 +195,11 @@ def write_to_postgres(batch_df, batch_id):
             .format("jdbc")
             .option(
                 "url",
-                "jdbc:postgresql://localhost:5433/reddit_pipeline",
+                f"jdbc:postgresql://localhost:{POSTGRES_PORT}/{POSTGRES_DB}",
             )
             .option("dbtable", "reddit_events")
-            .option("user", "reddit")
-            .option("password", "reddit_password")
+            .option("user", POSTGRES_USER)
+            .option("password", POSTGRES_PASSWORD)
             .option("driver", "org.postgresql.Driver")
             .mode("append")
             .save()
@@ -196,7 +207,7 @@ def write_to_postgres(batch_df, batch_id):
 
 
 # --------------------------------------------------
-# 9. UPSERT WINDOW SUMMARIES INTO POSTGRESQL
+# 10. UPSERT WINDOW SUMMARIES INTO POSTGRESQL
 # --------------------------------------------------
 
 def write_window_summary_to_postgres(batch_df, batch_id):
@@ -209,14 +220,13 @@ def write_window_summary_to_postgres(batch_df, batch_id):
 
     with psycopg.connect(
         host="localhost",
-        port=5433,
-        dbname="reddit_pipeline",
-        user="reddit",
-        password="reddit_password",
+        port=POSTGRES_PORT,
+        dbname=POSTGRES_DB,
+        user=POSTGRES_USER,
+        password=POSTGRES_PASSWORD,
     ) as connection:
 
         with connection.cursor() as cursor:
-
             for row in rows:
                 cursor.execute(
                     """
@@ -244,7 +254,7 @@ def write_window_summary_to_postgres(batch_df, batch_id):
 
 
 # --------------------------------------------------
-# 10. START THE INDIVIDUAL EVENT STREAM
+# 11. START INDIVIDUAL EVENT STREAM
 # --------------------------------------------------
 
 query = (
@@ -256,7 +266,7 @@ query = (
 
 
 # --------------------------------------------------
-# 11. START THE WINDOW SUMMARY STREAM
+# 12. START WINDOW SUMMARY STREAM
 # --------------------------------------------------
 
 window_query = (
@@ -269,7 +279,7 @@ window_query = (
 
 
 # --------------------------------------------------
-# 12. KEEP BOTH STREAMS RUNNING
+# 13. KEEP STREAMS RUNNING
 # --------------------------------------------------
 
 spark.streams.awaitAnyTermination()
