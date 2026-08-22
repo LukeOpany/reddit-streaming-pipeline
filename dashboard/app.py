@@ -6,6 +6,10 @@ import streamlit as st
 from dotenv import load_dotenv
 
 
+# --------------------------------------------------
+# 1. LOAD ENVIRONMENT VARIABLES
+# --------------------------------------------------
+
 load_dotenv()
 
 POSTGRES_DB = os.getenv("POSTGRES_DB")
@@ -13,6 +17,10 @@ POSTGRES_USER = os.getenv("POSTGRES_USER")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5433")
 
+
+# --------------------------------------------------
+# 2. CREATE DATABASE CONNECTION FUNCTION
+# --------------------------------------------------
 
 def get_connection():
     return psycopg.connect(
@@ -24,12 +32,20 @@ def get_connection():
     )
 
 
+# --------------------------------------------------
+# 3. PAGE TITLE
+# --------------------------------------------------
+
 st.title("Streaming Analytics Dashboard")
 
 
+# --------------------------------------------------
+# 4. GET DATA FROM POSTGRESQL
+# --------------------------------------------------
+
 with get_connection() as connection:
 
-    # Get the 20 most recent events
+    # Latest 20 events
     recent_events = pd.read_sql(
         """
         SELECT
@@ -46,7 +62,7 @@ with get_connection() as connection:
         connection,
     )
 
-    # Get total events and average text length
+    # Total events + average text length
     metrics = pd.read_sql(
         """
         SELECT
@@ -58,7 +74,7 @@ with get_connection() as connection:
         connection,
     )
 
-    # Find the subreddit with the most events
+    # Most active subreddit
     top_subreddit = pd.read_sql(
         """
         SELECT
@@ -73,9 +89,23 @@ with get_connection() as connection:
         connection,
     )
 
+    # Activity by subreddit
+    subreddit_activity = pd.read_sql(
+        """
+        SELECT
+            subreddit,
+            COUNT(*) AS event_count
+        FROM reddit_events
+        WHERE event_timestamp IS NOT NULL
+        GROUP BY subreddit
+        ORDER BY event_count DESC
+        """,
+        connection,
+    )
+
 
 # --------------------------------------------------
-# DISPLAY SUMMARY METRICS
+# 5. DISPLAY SUMMARY METRICS
 # --------------------------------------------------
 
 col1, col2, col3 = st.columns(3)
@@ -100,7 +130,20 @@ with col3:
 
 
 # --------------------------------------------------
-# DISPLAY RECENT EVENTS
+# 6. DISPLAY SUBREDDIT ACTIVITY CHART
+# --------------------------------------------------
+
+st.subheader("Activity by Subreddit")
+
+st.bar_chart(
+    subreddit_activity,
+    x="subreddit",
+    y="event_count",
+)
+
+
+# --------------------------------------------------
+# 7. DISPLAY RECENT EVENTS
 # --------------------------------------------------
 
 st.subheader("Recent Events")
