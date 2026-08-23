@@ -89,7 +89,7 @@ with get_connection() as connection:
         connection,
     )
 
-    # Activity by subreddit
+    # Overall activity by subreddit
     subreddit_activity = pd.read_sql(
         """
         SELECT
@@ -99,6 +99,19 @@ with get_connection() as connection:
         WHERE event_timestamp IS NOT NULL
         GROUP BY subreddit
         ORDER BY event_count DESC
+        """,
+        connection,
+    )
+
+    # Activity by subreddit over time
+    activity_over_time = pd.read_sql(
+        """
+        SELECT
+            window_start,
+            subreddit,
+            event_count
+        FROM event_window_summary
+        ORDER BY window_start
         """,
         connection,
     )
@@ -143,7 +156,22 @@ st.bar_chart(
 
 
 # --------------------------------------------------
-# 7. DISPLAY RECENT EVENTS
+# 7. PREPARE AND DISPLAY ACTIVITY OVER TIME
+# --------------------------------------------------
+
+st.subheader("Activity Over Time")
+
+activity_pivot = activity_over_time.pivot(
+    index="window_start",
+    columns="subreddit",
+    values="event_count",
+)
+
+st.line_chart(activity_pivot)
+
+
+# --------------------------------------------------
+# 8. DISPLAY RECENT EVENTS
 # --------------------------------------------------
 
 st.subheader("Recent Events")
