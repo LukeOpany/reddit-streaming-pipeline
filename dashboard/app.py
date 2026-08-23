@@ -116,6 +116,19 @@ with get_connection() as connection:
         connection,
     )
 
+    # Technology keyword mentions
+    keyword_mentions = pd.read_sql(
+        """
+        SELECT
+            SUM(mentions_python) AS python,
+            SUM(mentions_spark) AS spark,
+            SUM(mentions_kafka) AS kafka
+        FROM reddit_events
+        WHERE event_timestamp IS NOT NULL
+        """,
+        connection,
+    )
+
 
 # --------------------------------------------------
 # 5. DISPLAY SUMMARY METRICS
@@ -171,7 +184,27 @@ st.line_chart(activity_pivot)
 
 
 # --------------------------------------------------
-# 8. DISPLAY RECENT EVENTS
+# 8. PREPARE AND DISPLAY TECHNOLOGY MENTIONS
+# --------------------------------------------------
+
+keyword_chart = keyword_mentions.T.reset_index()
+
+keyword_chart.columns = [
+    "keyword",
+    "mentions",
+]
+
+st.subheader("Technology Mentions")
+
+st.bar_chart(
+    keyword_chart,
+    x="keyword",
+    y="mentions",
+)
+
+
+# --------------------------------------------------
+# 9. DISPLAY RECENT EVENTS
 # --------------------------------------------------
 
 st.subheader("Recent Events")
