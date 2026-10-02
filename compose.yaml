@@ -7,10 +7,19 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5433:5432"
-
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/reliability.sql:/docker-entrypoint-initdb.d/001-reliability.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
   kafka:
     image: apache/kafka:4.3.1
     container_name: reddit_kafka
     ports:
       - "9092:9092"
+volumes:
+  postgres_data:

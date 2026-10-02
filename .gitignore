@@ -10,3 +10,5 @@ __pycache__/
 
 # macOS-generated files
 .DS_Store
+checkpoints/
+reports/*.json

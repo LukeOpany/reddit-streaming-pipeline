@@ -1,0 +1,18 @@
+{
+  "scope": "PostgreSQL sink only; fresh Python workers, not Kafka/Spark restart",
+  "recorded_at": "2026-10-02T00:56:35.722648+00:00",
+  "accepted_events": 2,
+  "summary_total": 2,
+  "rejection_reasons": {
+    "too_late": 1,
+    "Expecting value: line 1 column 1 (char 0)": 1
+  },
+  "rollback_verified": true,
+  "process_replay_verified": true,
+  "duplicate_suppression_verified": true,
+  "boundary_lateness_verified": true,
+  "scenario_seconds": 0.903,
+  "scenario_input_records_per_second": 5.535,
+  "event_age_at_write_p95_seconds": 115.658,
+  "limitation": "Tiny correctness scenario includes deliberate two-minute-old input and process startup. Rate is not sustained throughput; event age is not Kafka end-to-end latency."
+}
