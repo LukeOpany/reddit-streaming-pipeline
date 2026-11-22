@@ -4,6 +4,8 @@ Kafka → Spark microbatches → transactional PostgreSQL event storage and minu
 
 This portfolio project uses synthetic Reddit-like events. It demonstrates a bounded local streaming workflow and a reproducible PostgreSQL recovery scenario; it is not a deployed distributed service.
 
+**Portfolio case study:** [What happens to the dashboard counts if Spark sends the same batch twice?](docs/recovery-case-study.md)
+
 ## What changed
 
 The original detail append and independent summary writer could disagree after retries. A single transaction now owns source offsets, accepted events, rejected input, the event-time high-water mark, and affected minute summaries. Spark persists its progress in a checkpoint directory.
